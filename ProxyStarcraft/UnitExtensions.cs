@@ -1,7 +1,5 @@
-﻿using System;
-
+﻿using System.Collections.Generic;
 using ProxyStarcraft.Proto;
-using System.Collections.Generic;
 
 namespace ProxyStarcraft
 {
@@ -23,9 +21,9 @@ namespace ProxyStarcraft
             var x = self.Raw.Pos.X - point.X;
             var y = self.Raw.Pos.Y - point.Y;
 
-            var centerToCenter = Math.Sqrt(x * x + y * y);
+            var centerToCenter = point.GetDistance(self.Raw.Pos);
 
-            return (float)(centerToCenter - self.Raw.Radius);
+            return centerToCenter - self.Raw.Radius;
         }
 
         /// <summary>

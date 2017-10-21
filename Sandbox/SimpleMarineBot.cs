@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
+﻿using System.Collections.Generic;
 using ProxyStarcraft;
 using ProxyStarcraft.Proto;
 
@@ -8,6 +6,8 @@ namespace Sandbox
 {
     public class SimpleMarineBot : IBot
     {
+        public Race Race => Race.Terran;
+
         public IReadOnlyList<Command> Act(GameState gameState)
         {
             var commands = new List<Command>();

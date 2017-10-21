@@ -46,12 +46,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddOnBuildLocation.cs" />
+    <Compile Include="Basic\BasicEconomyBot.cs" />
+    <Compile Include="Basic\BasicMilitaryBot.cs" />
     <Compile Include="Basic\BasicPlacementStrategy.cs" />
     <Compile Include="Building.cs" />
+    <Compile Include="DistanceExtensions.cs" />
+    <Compile Include="IBuildLocation.cs" />
     <Compile Include="IPlacementStrategy.cs" />
+    <Compile Include="LocationOffset.cs" />
     <Compile Include="LocationTargetCommand.cs" />
     <Compile Include="MapArray.cs" />
     <Compile Include="Map\Area.cs" />
+    <Compile Include="Map\Deposit.cs" />
     <Compile Include="Map\Edge.cs" />
     <Compile Include="Map\Mesa.cs" />
     <Compile Include="Map\Ramp.cs" />
@@ -89,6 +96,7 @@
     <Compile Include="Proto\Ui.cs" />
     <Compile Include="RallyLocationCommand.cs" />
     <Compile Include="RallyLocationWorkersCommand.cs" />
+    <Compile Include="StandardBuildLocation.cs" />
     <Compile Include="TerranBuilding.cs" />
     <Compile Include="TerranBuildingType.cs" />
     <Compile Include="TerranUnit.cs" />
@@ -101,6 +109,8 @@
     <Compile Include="UnitTargetCommand.cs" />
     <Compile Include="UnitType.cs" />
     <Compile Include="UnspecifiedUnit.cs" />
+    <Compile Include="UpgradeBuildLocation.cs" />
+    <Compile Include="VespeneBuildLocation.cs" />
     <Compile Include="ZergBuilding.cs" />
     <Compile Include="ZergBuildingType.cs" />
     <Compile Include="ZergUnit.cs" />

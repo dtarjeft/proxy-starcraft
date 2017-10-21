@@ -1,57 +1,77 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
-
+using System.Runtime.InteropServices;
 using ProxyStarcraft;
 using ProxyStarcraft.Client;
 using ProxyStarcraft.Proto;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using System.Drawing.Imaging;
-using ProxyStarcraft.Map;
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Sandbox
 {
     class Program
     {
-        // TODO: Fix hardcoded path
-        private const string BASE_GAME_PATH = "D:/Program Files (x86)/StarCraft II";
+        private static readonly string BASE_DRIVE = "D:/";
+        private static readonly string BASE_GAME_PATH = BASE_DRIVE + "Program Files (x86)/StarCraft II";
+        private static readonly string GAME_EXECUTABLE_PATH = BASE_GAME_PATH + "/Versions/Base58400/SC2_x64.exe"; //"/Support64/SC2Switcher_x64.exe";
+        private const string GAME_EXECUTABLE_ARGS_BASE = "-sso=1 -launch -uid s2_enus -listen 127.0.0.1 -displayMode 0";
+        private const string GAME_EXECUTABLE_ARGS_PLAYER1 = GAME_EXECUTABLE_ARGS_BASE + " -port 5000";
+        private const string GAME_EXECUTABLE_ARGS_PLAYER2 = GAME_EXECUTABLE_ARGS_BASE + " -port 5001";
 
-        private const string GAME_EXECUTABLE_PATH = BASE_GAME_PATH + "/Support64/SC2Switcher_x64.exe";
-        private const string GAME_EXECUTABLE_ARGS = "-sso=1 -launch -uid s2_enus -listen 127.0.0.1 -port 5000 -win";
+        private static string MARINE_MICRO_MAP_PATH => BASE_GAME_PATH + "/maps/Example/MarineMicro.SC2Map";
+        private static string EMPTY_MAP_PATH => BASE_GAME_PATH + "/maps/Test/Empty.SC2Map";
 
-        private const string MARINE_MICRO_MAP_PATH = BASE_GAME_PATH + "/maps/Example/MarineMicro.SC2Map";
-        private const string EMPTY_MAP_PATH = BASE_GAME_PATH + "/maps/Test/Empty.SC2Map";
+        private static string MINIGAME_BUILD_MARINES_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/BuildMarines.SC2Map";
+        private static string MINIGAME_COLLECT_MINERALS_AND_GAS_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/CollectMineralsAndGas.SC2Map";
+        private static string MINIGAME_COLLECT_MINERAL_SHARDS_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/CollectMineralShards.SC2Map";
+        private static string MINIGAME_DEFEAT_ROACHES_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/DefeatRoaches.SC2Map";
+        private static string MINIGAME_DEFEAT_ZERGLINGS_AND_BANELINGS_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/DefeatZerglingsAndBanelings.SC2Map";
+        private static string MINIGAME_FIND_AND_DEFEAT_ZERGLINGS_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/FindAndDefeatZerglings.SC2Map";
+        private static string MINIGAME_MOVE_TO_BEACON_MAP_PATH => BASE_GAME_PATH + "/maps/Minigames/MoveToBeacon.SC2Map";
 
-        private const string MINIGAME_BUILD_MARINES_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/BuildMarines.SC2Map";
-        private const string MINIGAME_COLLECT_MINERALS_AND_GAS_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/CollectMineralsAndGas.SC2Map";
-        private const string MINIGAME_COLLECT_MINERAL_SHARDS_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/CollectMineralShards.SC2Map";
-        private const string MINIGAME_DEFEAT_ROACHES_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/DefeatRoaches.SC2Map";
-        private const string MINIGAME_DEFEAT_ZERGLINGS_AND_BANELINGS_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/DefeatZerglingsAndBanelings.SC2Map";
-        private const string MINIGAME_FIND_AND_DEFEAT_ZERGLINGS_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/FindAndDefeatZerglings.SC2Map";
-        private const string MINIGAME_MOVE_TO_BEACON_MAP_PATH = BASE_GAME_PATH + "/maps/Minigames/MoveToBeacon.SC2Map";
-
-        private const string LADDER_ABYSSAL_REEF_MAP_PATH = BASE_GAME_PATH + "/maps/Ladder/AbyssalReefLE.SC2Map";
+        private static string LADDER_ABYSSAL_REEF_MAP_PATH => BASE_GAME_PATH + "/maps/Ladder/AbyssalReefLE.SC2Map";
         
         private static bool exit = false;
 
-        static void Main(string[] args)
+        static Program()
         {
-            // TODO: One or more of the following:
-            // 1. Get the process that this spawns, so we can terminate it on close
-            // 2. Find a better way to spawn the game process directly, so we don't
-            //    have to get a second process that this one spawns
-            // 3. Check if there's already a waiting client so we can reuse it
-            using (Process gameProcess = Process.Start(GAME_EXECUTABLE_PATH, GAME_EXECUTABLE_ARGS))
+            var executeInfoFile = Path.Combine(Environment.ExpandEnvironmentVariables("%userprofile%"), "Documents", "StarCraft II", "ExecuteInfo.txt");
+
+            if (!File.Exists(executeInfoFile))
             {
-                using (var client = new SynchronousApiClient("ws://127.0.0.1:5000/sc2api"))
+                Console.WriteLine("Could not find ExecuteInfo.txt. Using old values.");
+                return;
+            }
+
+            var lines = File.ReadAllLines(executeInfoFile);
+            foreach (var line in lines)
+            {
+                var match = Regex.Match(line, "^executable = (.+)$");
+                if (match.Success)
                 {
-                    //RunMarineMicroGame(client);
-                    //RunEmptyMapGame(client);
-                    PlayAgainstStandardAI(client);
+                    GAME_EXECUTABLE_PATH = match.Groups[1].Value;
+                    break;
                 }
             }
+
+            BASE_GAME_PATH = Path.GetFullPath(Path.Combine(GAME_EXECUTABLE_PATH, @"..\..\..\"));
+            BASE_DRIVE = Path.GetPathRoot(GAME_EXECUTABLE_PATH);
+        }
+
+        static void Main(string[] args)
+        {
+            //var bot = new BenchmarkBot();
+
+            //PlayAgainstStandardAI(bot);
+
+            var bot1 = new BenchmarkBot();
+            var bot2 = new ZergRushBot();
+
+            PlayOneOnOne(bot1, bot2);
         }
         
         public static void RunMarineMicroGame(SynchronousApiClient client)
@@ -134,42 +154,121 @@ namespace Sandbox
             }
         }
 
-        public static void PlayAgainstStandardAI(SynchronousApiClient client)
+        public static void PlayOneOnOne(IBot bot1, IBot bot2)
         {
-            if (!client.InitiateGameAgainstComputer(LADDER_ABYSSAL_REEF_MAP_PATH, Race.Terran, Difficulty.MediumHard))
-            {
-                return;
-            }
-            
-            var bot = new BenchmarkBot();
-            var gameState = client.GetGameState();
+            // TODO: One or more of the following:
+            // 1. Get the process that this spawns, so we can terminate it on close
+            // 2. Find a better way to spawn the game process directly, so we don't
+            //    have to get a second process that this one spawns
+            // 3. Check if there's already a waiting client so we can reuse it
 
+            // TODO: Reduce duplication
+            var info1 = new ProcessStartInfo(GAME_EXECUTABLE_PATH);
+            info1.WorkingDirectory = BASE_GAME_PATH + "/Support64";
+            info1.Arguments = GAME_EXECUTABLE_ARGS_PLAYER1;
+
+            var info2 = new ProcessStartInfo(GAME_EXECUTABLE_PATH);
+            info2.WorkingDirectory = BASE_GAME_PATH + "/Support64";
+            info2.Arguments = GAME_EXECUTABLE_ARGS_PLAYER2;
+
+            using (Process gameProcess1 = Process.Start(info1))
+            {
+                using (Process gameProcess2 = Process.Start(info2))
+                {
+                    using (var client1 = new SynchronousApiClient("ws://127.0.0.1:5000/sc2api"))
+                    {
+                        using (var client2 = new SynchronousApiClient("ws://127.0.0.1:5001/sc2api"))
+                        {
+                            var initiateGameSuccess = client1.InitiateGameAgainstBot(LADDER_ABYSSAL_REEF_MAP_PATH, bot1.Race, bot2.Race);
+
+                            if (!client2.JoinGameAgainstBot(bot2.Race))
+                            {
+                                return;
+                            }
+
+                            if (!initiateGameSuccess.Result)
+                            {
+                                return;
+                            }
+
+                            var gameState1 = client1.GetGameState();
+                            var gameState2 = client2.GetGameState();
+
+                            //SaveMapData(gameState1);
+
+                            while (true)
+                            {
+                                var commands1 = bot1.Act(gameState1);
+                                client1.SendCommands(commands1);
+                                client1.Step();
+                                gameState1 = client1.GetGameState();
+
+                                var commands2 = bot2.Act(gameState2);
+                                client2.SendCommands(commands2);
+                                client2.Step();
+                                gameState2 = client2.GetGameState();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void PlayAgainstStandardAI(IBot bot)
+        {
+            // TODO: One or more of the following:
+            // 1. Get the process that this spawns, so we can terminate it on close
+            // 2. Find a better way to spawn the game process directly, so we don't
+            //    have to get a second process that this one spawns
+            // 3. Check if there's already a waiting client so we can reuse it
+            var info = new ProcessStartInfo(GAME_EXECUTABLE_PATH);
+            info.WorkingDirectory = BASE_GAME_PATH + "/Support64";
+            info.Arguments = GAME_EXECUTABLE_ARGS_PLAYER1;
+
+            using (Process gameProcess = Process.Start(info))
+            {
+                using (var client = new SynchronousApiClient("ws://127.0.0.1:5000/sc2api"))
+                {
+                    if (!client.InitiateGameAgainstComputer(LADDER_ABYSSAL_REEF_MAP_PATH, Race.Terran, Difficulty.MediumHard))
+                    {
+                        return;
+                    }
+
+                    var gameState = client.GetGameState();
+
+                    //SaveMapData(gameState);
+
+                    while (true)
+                    {
+                        var commands = bot.Act(gameState);
+                        client.SendCommands(commands);
+                        client.Step();
+                        gameState = client.GetGameState();
+                    }
+                }
+            }
+        }
+
+        private static void SaveMapData(GameState gameState)
+        {
             using (var pathingGrid = GetImage(gameState.MapData.PathingGrid))
             {
-                pathingGrid.Save("D:/Temp/pathing.bmp");
+                pathingGrid.Save(BASE_DRIVE + "Temp/pathing.bmp");
             }
 
             using (var placementGrid = GetImage(gameState.MapData.PlacementGrid))
             {
-                placementGrid.Save("D:/Temp/placement.bmp");
+                placementGrid.Save(BASE_DRIVE + "Temp/placement.bmp");
             }
 
             using (var terrainHeight = GetImage(gameState.MapData.HeightGrid))
             {
-                terrainHeight.Save("D:/Temp/terrain-height.bmp");
+                terrainHeight.Save(BASE_DRIVE + "Temp/terrain-height.bmp");
             }
-            
+
             using (var areasBitmap = GetImage(gameState.MapData.AreaGrid))
             {
-                areasBitmap.Save("D:/Temp/areas.bmp");
-            }
-            
-            while (true)
-            {
-                var commands = bot.Act(gameState);
-                client.SendCommands(commands);
-                client.Step();
-                gameState = client.GetGameState();
+                areasBitmap.Save(BASE_DRIVE + "Temp/areas.bmp");
             }
         }
 

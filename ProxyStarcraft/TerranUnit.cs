@@ -8,21 +8,23 @@ namespace ProxyStarcraft
         {
             var unitType = translator.GetBuildingOrUnitType(unit.UnitType);
 
-            if (unitType.TerranUnit == TerranUnitType.Unspecified)
+            if (unitType.Value is TerranUnitType terranUnit)
+            {
+                this.TerranUnitType = terranUnit;
+            }
+            else
             {
                 throw new ArgumentException($"Expected a TerranUnitType, got '{unitType.ToString()}'.");
             }
-
-            this.TerranUnitType = unitType.TerranUnit;
         }
 
         public TerranUnitType TerranUnitType { get; private set; }
 
         public override BuildingOrUnitType Type => this.TerranUnitType;
 
-        public BuildCommand Build(TerranBuildingType building, int x, int y)
+        public BuildCommand Build(TerranBuildingType building, IBuildLocation location)
         {
-            return base.Build(building, x, y);
+            return base.Build(building, location);
         }
     }
 }

@@ -8,21 +8,23 @@ namespace ProxyStarcraft
         {
             var unitType = translator.GetBuildingOrUnitType(unit.UnitType);
 
-            if (unitType.ZergUnit == ZergUnitType.Unspecified)
+            if (unitType.Value is ZergUnitType zergUnit)
+            {
+                this.ZergUnitType = zergUnit;
+            }
+            else
             {
                 throw new ArgumentException($"Expected a ZergUnitType, got '{unitType.ToString()}'.");
             }
-
-            this.ZergUnitType = unitType.ZergUnit;
         }
 
         public ZergUnitType ZergUnitType { get; private set; }
 
         public override BuildingOrUnitType Type => this.ZergUnitType;
 
-        public BuildCommand Build(ZergBuildingType building, int x, int y)
+        public BuildCommand Build(ZergBuildingType building, IBuildLocation location)
         {
-            return base.Build(building, x, y);
+            return base.Build(building, location);
         }
     }
 }

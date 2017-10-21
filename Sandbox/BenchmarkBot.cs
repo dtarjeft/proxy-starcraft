@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-
 using ProxyStarcraft;
-using ProxyStarcraft.Proto;
 using ProxyStarcraft.Basic;
+using ProxyStarcraft.Map;
+using ProxyStarcraft.Proto;
 
 namespace Sandbox
 {
@@ -29,6 +28,8 @@ namespace Sandbox
         // so I'm going to avoid issuing any commands within one step of the last command set
         private int sleep = 0;
 
+        public Race Race => Race.Terran;
+
         public IReadOnlyList<Command> Act(GameState gameState)
         {
             /* Detailed strategy:
@@ -52,9 +53,6 @@ namespace Sandbox
             var workers = new List<TerranUnit>();
             var soldiers = new List<TerranUnit>();
             var soldierProducers = new List<TerranBuilding>();
-
-            var mineralDeposits = gameState.NeutralUnits.Where(u => u.IsMineralDeposit).ToList();
-
 
             if (sleep > 0)
             {
@@ -90,6 +88,17 @@ namespace Sandbox
                 }
             }
 
+            if (commandCenter == null)
+            {
+                // Accept death as inevitable.
+                return new List<Command>();
+
+                // TODO: Surrender?
+            }
+
+            Deposit closestDeposit = gameState.MapData.Deposits.OrderBy(d => commandCenter.GetDistance(d.Center)).First();
+            var mineralDeposits = closestDeposit.Resources.Where(u => u.IsMineralDeposit).ToList();
+            
             // First update, ignore the default worker orders, which are to mass on the center mineral deposit
             // (this ends up causing problems since we have to keep track of who is harvesting what ourselves)
             if (first)
@@ -101,15 +110,7 @@ namespace Sandbox
 
                 workersByMineralDeposit = mineralDeposits.ToDictionary(m => m.Raw.Tag, m => new List<ulong>());
             }
-
-            if (commandCenter == null)
-            {
-                // Accept death as inevitable.
-                return new List<Command>();
-                
-                // TODO: Surrender?
-            }
-
+            
             // Each possible behavior is implemented as a function that adds a command to the list
             // if the situation is appropriate. We will then execute whichever command was added first.
             BuildWorker(gameState, commandCenter, commands);
@@ -191,16 +192,54 @@ namespace Sandbox
 
         private void Attack(GameState gameState, TerranBuilding commandCenter, List<TerranUnit> soldiers, List<Command> commands)
         {
+            // Initially, await X idle soldiers and send them toward the enemy's starting location.
+            // Once they're there and have no further orders, send them to attack any sighted enemy unit/structure.
+            // Once we run out of those, send them to scout every resource deposit until we find more.
+            var enemyStartLocation = gameState.MapData.Raw.StartLocations.OrderByDescending(point => commandCenter.GetDistance(point)).First();
+
             var idleSoldiers = soldiers.Where(s => s.Raw.Orders.Count == 0).ToList();
 
-            if (idleSoldiers.Count >= AttackThreshold)
+            if (!soldiers.Any(s => s.GetDistance(enemyStartLocation) < 5f) ||
+                gameState.EnemyUnits.Any(e => e.GetDistance(enemyStartLocation) < 10f))
             {
-                var enemyStartLocation = gameState.MapData.Raw.StartLocations.OrderByDescending(point => commandCenter.GetDistance(point)).First();
+                if (idleSoldiers.Count >= AttackThreshold)
+                {
+                    foreach (var soldier in idleSoldiers)
+                    {
+                        commands.Add(soldier.AttackMove(enemyStartLocation.X, enemyStartLocation.Y));
+                    }
+                }
+                
+                return;
+            }
 
+            if (gameState.EnemyUnits.Count > 0)
+            {
                 foreach (var soldier in idleSoldiers)
                 {
-                    commands.Add(soldier.AttackMove(enemyStartLocation.X, enemyStartLocation.Y));
+                    commands.Add(soldier.AttackMove(gameState.EnemyUnits[0].X, gameState.EnemyUnits[0].Y));
                 }
+
+                return;
+            }
+
+            var unscoutedLocations = gameState.MapData.Deposits.Select(d => d.Center).ToList();
+
+            foreach (var location in unscoutedLocations)
+            {
+                if (soldiers.Any(s => s.GetDistance(location) < 5f ||
+                                 s.Raw.Orders.Any(o => o.TargetWorldSpacePos.GetDistance(location) < 5f)))
+                {
+                    continue;
+                }
+
+                if (idleSoldiers.Count == 0)
+                {
+                    break;
+                }
+
+                commands.Add(idleSoldiers[0].AttackMove(location));
+                idleSoldiers.RemoveAt(0);
             }
         }
 
@@ -284,7 +323,7 @@ namespace Sandbox
         private BuildCommand GetBuildCommand(TerranUnit unit, TerranBuildingType building, GameState gameState)
         {
             var buildLocation = this.placementStrategy.GetPlacement(building, gameState);
-            return unit.Build(building, buildLocation.X, buildLocation.Y);
+            return unit.Build(building, buildLocation);
         }
     }
 }
